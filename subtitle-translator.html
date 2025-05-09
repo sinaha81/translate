@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="app-title">Multi-API Subtitle Translator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #222;
+            --primary-hover: #111;
+            --bg-color: #fff;
+            --text-color: #222;
+            --input-bg: #f5f5f5;
+            --input-border: #ddd;
+            --card-bg: #fff;
+            --card-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .dark-mode {
+            --primary-color: #fff;
+            --primary-hover: #eee;
+            --bg-color: #181a1b;
+            --text-color: #eee;
+            --input-bg: #232323;
+            --input-border: #444;
+            --card-bg: #181a1b;
+            --card-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            width: 100%;
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 24px 0; /* Reduced top/bottom padding for more content visibility */
+            flex: 1;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--input-border);
+        }
+        .top-bar h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .controls {
+            display: flex;
+            gap: 8px;
+        }
+        .control-btn, #language-toggle { /* Added #language-toggle */
+            background: transparent;
+            border: 1px solid var(--input-border); /* Added border for visibility */
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 0.9rem; /* Slightly smaller for language toggle */
+            padding: 5px 8px; /* Adjusted padding */
+            border-radius: 4px; /* Rounded corners */
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .control-btn:hover, #language-toggle:hover {
+            background-color: #ededed;
+        }
+        .dark-mode .control-btn, .dark-mode #language-toggle {
+             border: 1px solid var(--input-border);
+        }
+        .dark-mode .control-btn:hover, .dark-mode #language-toggle:hover {
+            background-color: #232323;
+        }
+        .instructions {
+            text-align: center;
+            margin-bottom: 18px;
+            font-size: 0.95rem;
+            color: #888;
+        }
+        form {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 18px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 18px;
+            border: 1px solid var(--input-border);
+        }
+        .form-group { margin-bottom: 13px; }
+        .form-label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+        .radio-group { display: flex; gap: 12px; margin-bottom: 8px; }
+        .radio-label { display: flex; align-items: center; gap: 4px; }
+        textarea, input[type="text"], input[type="password"], input[type="number"], select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--input-border);
+            border-radius: 4px;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 0.97rem;
+            transition: border 0.2s;
+        }
+        textarea:focus, input:focus, select:focus {
+            outline: none;
+            border-color: #bbb;
+        }
+        .api-key-container { position: relative; }
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+        }
+        .dropzone {
+            border: 2px dashed var(--input-border);
+            border-radius: 4px;
+            padding: 18px;
+            text-align: center;
+            cursor: pointer;
+            background-color: var(--input-bg);
+            transition: border-color 0.3s;
+        }
+        .dropzone:hover { border-color: #bbb; }
+        .dz-message { color: var(--text-color); }
+        .dz-message i {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            color: #888;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 4px;
+        }
+        .note {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-top: 4px;
+        }
+        .dark-mode .note { color: #666; }
+        .settings {
+            margin-bottom: 16px;
+            border: 1px solid var(--input-border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .settings summary {
+            padding: 8px 12px;
+            background-color: #f5f5f5;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s;
+            color: var(--text-color);
+        }
+        .dark-mode .settings summary {
+            background-color: #232323;
+        }
+        .settings summary:hover {
+            background-color: #ededed;
+        }
+        .dark-mode .settings summary:hover {
+            background-color: #232323;
+        }
+        .settings-content {
+            padding: 12px;
+            border-top: 1px solid var(--input-border);
+        }
+        .button {
+            padding: 9px 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #222;
+            color: #fff;
+        }
+        .button.primary-button {
+            background: #222;
+            color: #fff;
+        }
+        .button.primary-button:hover {
+            background: #111;
+        }
+        .submit-container { display: flex; justify-content: center; }
+        .shortcut-hint { font-size: 0.75rem; opacity: 0.6; }
+        .progress-container { margin-top: 18px; display: none; }
+        .progress-bar {
+            height: 8px;
+            background-color: #ededed;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .progress {
+            height: 100%;
+            background-color: #222;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .progress-text {
+            text-align: center;
+            margin-bottom: 4px;
+            font-size: 0.95rem;
+        }
+        .progress-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        .dark-mode .progress-details { color: #666; }
+        .download-link {
+            text-align: center;
+            margin: 18px 0;
+        }
+        .download-link a {
+            display: inline-block;
+            padding: 9px 18px;
+            background-color: #222;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .download-link a:hover {
+            background-color: #111;
+        }
+        .error-message {
+            color: #fff;
+            background: #333;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+        .footer {
+            text-align: center;
+            padding: 18px;
+            margin-top: 18px;
+            border-top: 1px solid var(--input-border);
+            font-size: 0.85rem;
+            color: #888;
+        }
+        .footer a {
+            color: #222;
+            text-decoration: underline;
+        }
+        .donate-section { margin-top: 8px; }
+        .donate-button,
+        .donate-button:visited,
+        .donate-button:active {
+            color: #fff !important;
+            background: #333;
+            border-radius: 4px;
+            padding: 5px 14px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+            border: none;
+            display: inline-block;
+        }
+        .donate-button:hover {
+            background: #111;
+        }
+        .warning {
+            background-color: #f5f5f5;
+            border-left: 3px solid #bbb;
+            padding: 7px 10px;
+            margin-bottom: 12px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        .api-model-group {
+            margin-bottom: 12px;
+            padding: 12px;
+            border: 1px solid var(--input-border);
+            border-radius: 6px;
+            background-color: #fafafa;
+        }
+        .dark-mode .api-model-group {
+            background-color: #232323;
+        }
+        .dark-mode .dropzone {
+            background-color: var(--input-bg);
+            border-color: var(--input-border);
+        }
+        .dark-mode #live-input,
+        .dark-mode #live-output {
+            background: var(--input-bg) !important;
+            color: var(--text-color) !important;
+        }
+        /* Live translation box backgrounds for both modes */
+        #live-input, #live-output {
+            background: #f5f5f5;
+            color: #222;
+        }
+        .dark-mode #live-input, .dark-mode #live-output {
+            background: #232323 !important;
+            color: #eee !important;
+        }
+        /* Remove all colored icons */
+        .dz-message i, .download-link a i, .top-bar .fa, .top-bar .fas {
+            color: #888 !important;
+        }
+        /* Live translation table styles */
+        #live-translation-table-container {
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+        #live-translation-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            border: 1px solid var(--input-border);
+            font-size: 0.98em;
+        }
+        #live-translation-table th, #live-translation-table td {
+            border: 1px solid var(--input-border);
+            padding: 8px 10px;
+            vertical-align: top;
+            text-align: left;
+        }
+        #live-translation-table th {
+            background: #f5f5f5;
+            color: #888;
+            font-weight: 600;
+        }
+        .dark-mode #live-translation-table th {
+            background: #232323;
+            color: #aaa;
+        }
+        .rtl-cell {
+            direction: rtl;
+            text-align: right;
+            font-family: inherit;
+        }
+        .ltr-cell {
+            direction: ltr;
+            text-align: left;
+            font-family: inherit;
+        }
+        .translation-error {
+            background: #fff0f0;
+            color: #c00;
+        }
+        .dark-mode .translation-error {
+            background: #2a1818;
+            color: #ff8888;
+        }
+        .correction-btn {
+            background: #eee;
+            color: #222;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 0.95em;
+            padding: 2px 10px;
+            cursor: pointer;
+            margin-left: 4px;
+            margin-right: 4px;
+            transition: background 0.2s;
+        }
+        .correction-btn:hover {
+            background: #ddd;
+        }
+        .dark-mode .correction-btn {
+            background: #232323;
+            color: #eee;
+            border: 1px solid #444;
+        }
+        .dark-mode .correction-btn:hover {
+            background: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top-bar">
+             <h1 id="page-title" data-en="Subtitle Translator" data-fa="مترجم زیرنویس">Subtitle Translator</h1>
+             <div class="controls">
+                 <button id="language-toggle" class="control-btn" aria-label="Toggle language" title="Toggle UI language (English/فارسی)">
+                     <span id="language-toggle-text">فارسی</span>
+                 </button>
+                 <button id="clear-memory-button" class="control-btn" aria-label="Clear translation memory" title="Clear translation memory">
+                     <i class="fa fa-trash"></i>
+                 </button>
+                 <button id="themeToggle" class="control-btn" aria-label="Toggle theme" title="Toggle light/dark theme">
+                     <i class="fas fa-moon"></i>
+                 </button>
+            </div>
+        </div>
+
+        <form id="translate-form">
+            <div class="form-group">
+                <label class="form-label" data-en="Input Method:" data-fa="روش ورودی:">Input Method:</label>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="input_method" value="file" checked> <span data-en="Upload File" data-fa="بارگذاری فایل">Upload File</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="input_method" value="text"> <span data-en="Paste Text" data-fa="چسباندن متن">Paste Text</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="file-input" class="form-group input-section">
+                <label class="form-label" data-en="Upload Subtitle File (SRT, VTT, SSA, ASS):" data-fa="بارگذاری فایل زیرنویس (SRT, VTT, SSA, ASS):">Upload Subtitle File (SRT, VTT, SSA, ASS):</label>
+                <div id="dropzone-upload" class="dropzone">
+                    <div class="dz-message">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p data-en="Drag & drop subtitle file here<br>or click to browse" data-fa="فایل زیرنویس را اینجا بکشید و رها کنید<br>یا برای انتخاب کلیک کنید">Drag & drop subtitle file here<br>or click to browse</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="text-input" class="form-group input-section" style="display: none;">
+                <label class="form-label" for="srt_text" data-en="Paste SRT Content:" data-fa="محتوای SRT را بچسبانید:">Paste SRT Content:</label>
+                <textarea id="srt_text" name="srt_text" rows="6" placeholder="Paste your SRT content here..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="youtube_url" data-en="YouTube Video URL (auto-fetch subtitles):" data-fa="آدرس ویدیوی یوتیوب (دریافت خودکار زیرنویس):">YouTube Video URL (auto-fetch subtitles):</label>
+                <input type="text" id="youtube_url" name="youtube_url" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off">
+                <p class="note" data-en="Paste a YouTube link to auto-download English subtitles for translation." data-fa="لینک یوتیوب را برای دانلود خودکار زیرنویس انگلیسی جهت ترجمه، وارد کنید.">Paste a YouTube link to auto-download English subtitles for translation.</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" data-en="Select API Provider:" data-fa="انتخاب ارائه‌دهنده API:">Select API Provider:</label>
+                <select id="api_provider" name="api_provider">
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openai">Open AI</option>
+                    <option value="deepseek">Deepseek</option>
+                    <option value="custom">Custom API</option>
+                </select>
+            </div>
+
+            <div id="api-keys-section">
+                <div class="api-model-group" id="gemini-api-section">
+                    <div class="form-group">
+                        <label class="form-label" for="gemini_api_key" data-en="Gemini API Key:" data-fa="کلید Gemini API:">Gemini API Key:</label>
+                        <div class="api-key-container">
+                            <input type="password" id="gemini_api_key" name="gemini_api_key" placeholder="Enter your Gemini API key">
+                            <button type="button" class="toggle-password" data-for="gemini_api_key"><i class="fas fa-eye"></i></button>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="remember_gemini_key" name="remember_gemini_key">
+                            <label for="remember_gemini_key" data-en="Remember key" data-fa="ذخیره کلید">Remember key</label>
+                        </div>
+                        <p class="note" data-en="Get your API key from <a href='https://aistudio.google.com/app/apikey' target='_blank'>Google AI Studio</a>." data-fa="کلید API خود را از <a href='https://aistudio.google.com/app/apikey' target='_blank'>Google AI Studio</a> دریافت کنید.">Get your API key from <a href='https://aistudio.google.com/app/apikey' target='_blank'>Google AI Studio</a>.</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="gemini_model" data-en="Gemini Model:" data-fa="مدل Gemini:">Gemini Model:</label>
+                        <select id="gemini_model" name="gemini_model">
+                            <option value="gemini-1.5-pro-latest" selected>Gemini 1.5 Pro (Latest)</option>
+                            <option value="gemini-1.5-flash-latest">Gemini 1.5 Flash (Latest)</option>
+                            <option value="gemini-2.5-pro-preview-05-06">Gemini 2.5 Pro Preview (05-06)</option>
+                            <option value="gemini-2.5-flash-preview-04-17">Gemini 2.5 Flash Preview (04-17)</option>
+                            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                            <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+                            <option value="gemini-1.0-pro">Gemini 1.0 Pro (Older)</option>
+                        </select>
+                        <p class="note" style="color:#c00;" data-en='If you get quota errors, try an older or "flash" model.' data-fa="در صورت بروز خطای سهمیه، مدل قدیمی‌تر یا 'flash' را امتحان کنید.">
+                            If you get quota errors, try an older or "flash" model.
+                        </p>
+                    </div>
+                </div>
+                <div class="api-model-group" id="openai-api-section" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label" for="openai_api_key" data-en="OpenAI API Key:" data-fa="کلید OpenAI API:">OpenAI API Key:</label>
+                        <div class="api-key-container">
+                            <input type="password" id="openai_api_key" name="openai_api_key" placeholder="Enter your OpenAI API key">
+                            <button type="button" class="toggle-password" data-for="openai_api_key"><i class="fas fa-eye"></i></button>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="remember_openai_key" name="remember_openai_key">
+                            <label for="remember_openai_key" data-en="Remember key" data-fa="ذخیره کلید">Remember key</label>
+                        </div>
+                        <p class="note" data-en="Get your API key from <a href='https://platform.openai.com/api-keys' target='_blank'>OpenAI Platform</a>." data-fa="کلید API خود را از <a href='https://platform.openai.com/api-keys' target='_blank'>OpenAI Platform</a> دریافت کنید.">Get your API key from <a href='https://platform.openai.com/api-keys' target='_blank'>OpenAI Platform</a>.</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="openai_model" data-en="OpenAI Model:" data-fa="مدل OpenAI:">OpenAI Model:</label>
+                        <select id="openai_model" name="openai_model">
+                            <option value="gpt-4o" selected>GPT-4o</option>
+                            <option value="gpt-4o-mini">GPT-4o Mini</option>
+                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="api-model-group" id="deepseek-api-section" style="display: none;">
+                     <div class="form-group">
+                        <label class="form-label" for="deepseek_api_key" data-en="Deepseek API Key:" data-fa="کلید Deepseek API:">Deepseek API Key:</label>
+                        <div class="api-key-container">
+                            <input type="password" id="deepseek_api_key" name="deepseek_api_key" placeholder="Enter your Deepseek API key">
+                            <button type="button" class="toggle-password" data-for="deepseek_api_key"><i class="fas fa-eye"></i></button>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="remember_deepseek_key" name="remember_deepseek_key">
+                            <label for="remember_deepseek_key" data-en="Remember key" data-fa="ذخیره کلید">Remember key</label>
+                        </div>
+                        <p class="note" data-en="Get your API key from <a href='https://platform.deepseek.com' target='_blank'>Deepseek Platform</a>." data-fa="کلید API خود را از <a href='https://platform.deepseek.com' target='_blank'>Deepseek Platform</a> دریافت کنید.">Get your API key from <a href='https://platform.deepseek.com' target='_blank'>Deepseek Platform</a>.</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="deepseek_model" data-en="Deepseek Model:" data-fa="مدل Deepseek:">Deepseek Model:</label>
+                        <select id="deepseek_model" name="deepseek_model">
+                            <option value="deepseek-chat" selected>Deepseek Chat</option>
+                            <option value="deepseek-coder">Deepseek Coder</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="api-model-group" id="custom-api-section" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label" for="custom_api_url" data-en="Custom API Endpoint:" data-fa="نقطه پایانی API سفارشی:">Custom API Endpoint:</label>
+                        <input type="text" id="custom_api_url" name="custom_api_url" placeholder="https://your.api/endpoint">
+                        <p class="note" data-en="Endpoint must be OpenAI-compatible (chat/completions) or similar." data-fa="نقطه پایانی باید با OpenAI (chat/completions) یا مشابه سازگار باشد.">Endpoint must be OpenAI-compatible (chat/completions) or similar.</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="custom_api_key" data-en="Custom API Key:" data-fa="کلید API سفارشی:">Custom API Key:</label>
+                        <div class="api-key-container">
+                            <input type="password" id="custom_api_key" name="custom_api_key" placeholder="Enter your custom API key">
+                            <button type="button" class="toggle-password" data-for="custom_api_key"><i class="fas fa-eye"></i></button>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="remember_custom_key" name="remember_custom_key">
+                            <label for="remember_custom_key" data-en="Remember key" data-fa="ذخیره کلید">Remember key</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="custom_model" data-en="Custom Model Name:" data-fa="نام مدل سفارشی:">Custom Model Name:</label>
+                        <input type="text" id="custom_model" name="custom_model" placeholder="e.g., llama-3, your-model-name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="custom_extra_headers" data-en="Extra Headers (JSON):" data-fa="هدرهای اضافی (JSON):">Extra Headers (JSON):</label>
+                        <textarea id="custom_extra_headers" name="custom_extra_headers" rows="2" placeholder='{"Custom-Header":"value"}'></textarea>
+                        <p class="note" data-en="Optional: Add extra headers as JSON." data-fa="اختیاری: هدرهای اضافی را به صورت JSON اضافه کنید.">Optional: Add extra headers as JSON.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="lang-input" data-en="Target Language:" data-fa="زبان مقصد:">Target Language:</label>
+                <input type="text" id="lang-input" name="lang" value="Persian (Farsi)" placeholder="e.g., Spanish, French, Japanese" required>
+            </div>
+
+            <details class="settings">
+                <summary><span id="advanced-settings-summary-text" data-en="Advanced Settings" data-fa="تنظیمات پیشرفته">Advanced Settings</span> <i class="summary-icon fas fa-chevron-down"></i></summary>
+                <div class="settings-content">
+                    <p class="warning" data-en="⚠️ Adjusting these settings can affect performance, cost, and translation quality." data-fa="⚠️ تنظیم این موارد می‌تواند بر عملکرد، هزینه و کیفیت ترجمه تأثیر بگذارد.">
+                        ⚠️ Adjusting these settings can affect performance, cost, and translation quality.
+                    </p>
+                    <div class="form-group">
+                        <label class="form-label" for="temperature" data-en="Temperature:" data-fa="دما (Temperature):">Temperature:</label>
+                        <input type="number" id="temperature" name="temperature" min="0" max="2" step="0.1" value="0.7" placeholder="e.g., 0.7">
+                        <p class="note" data-en="Controls randomness (0.0-2.0). Higher values = more creative/random." data-fa="کنترل خلاقیت (۰.۰-۲.۰). مقادیر بالاتر = خلاقیت/تصادفی بودن بیشتر.">Controls randomness (0.0-2.0). Higher values = more creative/random.</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="base_delay" data-en="Base Delay (ms):" data-fa="تأخیر پایه (میلی‌ثانیه):">Base Delay (ms):</label>
+                        <input type="number" id="base_delay" name="base_delay" min="100" value="1000" placeholder="1000" required>
+                        <p class="note" data-en="Delay between successful chunk requests." data-fa="تأخیر بین درخواست‌های موفق هر بخش.">Delay between successful chunk requests.</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="chunk_count" data-en="Number of Chunks:" data-fa="تعداد بخش‌ها:">Number of Chunks:</label>
+                        <input type="number" id="chunk_count" name="chunk_count" min="1" max="100" value="20" placeholder="20" required>
+                        <p class="note" data-en="Split subtitles into this many parts (1-100)." data-fa="زیرنویس را به این تعداد بخش تقسیم کن (۱-۱۰۰).">Split subtitles into this many parts (1-100).</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="translation_prompt" data-en="System Prompt / Instructions:" data-fa="دستورالعمل سیستم/راهنما:">System Prompt / Instructions:</label>
+                        <textarea id="translation_prompt" name="translation_prompt" rows="8">
+                        شما یک متخصص حرفه‌ای ترجمه زیرنویس هستید که به چندین زبان تسلط دارید. وظیفه اصلی شما ترجمه دقیق و طبیعی متن زیرنویس است به‌گونه‌ای که ساختار فایل زیرنویس (شامل شماره‌گذاری، زمان‌بندی و فرمت‌بندی) کاملاً حفظ شود.
+
+                        مهم:
+                        - فقط فایل زیرنویس ترجمه‌شده را در همان قالب ورودی خروجی بده و هیچ توضیح، ابزار، یا اطلاعات اضافه‌ای ننویس.
+                        - اگر مدل شما از قابلیت tool call یا function call (مانند Deepseek) پشتیبانی می‌کند، این قابلیت‌ها را نادیده بگیر و فقط فایل زیرنویس ترجمه‌شده را به صورت متن ساده، با حفظ تمام زمان‌بندی‌ها و فرمت‌بندی، خروجی بده.
+                        - به هیچ عنوان شماره‌گذاری یا زمان‌بندی زیرنویس را حذف یا تغییر نده.
+                        - هیچ توضیح، تفسیر یا خروجی اضافه‌ای (از جمله JSON یا tool call) ننویس.
+
+                        دستورالعمل ترجمه:
+                        - هر بخش زیرنویس را به صورت طبیعی و خلاصه ترجمه کن تا برای خواندن روی صفحه مناسب باشد.
+                        - هنگام ترجمه به فارسی یا سایر زبان‌های راست‌به‌چپ، متن را به‌درستی راست‌چین کن.
+                        - معنی و لحن احساسی دیالوگ را حفظ کن.
+                        - اسامی انگلیسی را ترجمه نکن؛ آن‌ها را به همان صورت اصلی درون گیومه انگلیسی ("") قرار بده تا چینش متن حفظ شود.
+                        - اصطلاحات و ارجاعات فرهنگی را متناسب با مخاطب زبان مقصد تطبیق بده.
+                        - اگر یک عبارت چند ترجمه ممکن داشت، مناسب‌ترین ترجمه را با توجه به موقعیت تصویری و سبک گفتار شخصیت انتخاب کن.
+                        - اگر با محتوای نامشخص یا مبهم مواجه شدی، توضیح کوتاهی در پرانتز () بعد از ترجمه بنویس.
+                        - لحن رسمی یا غیررسمی را مطابق متن اصلی رعایت کن.
+
+                        قالب خروجی:
+                        - فقط فایل زیرنویس ترجمه‌شده را با حفظ تمام زمان‌بندی، شماره‌گذاری و فرمت‌بندی خروجی بده.
+                        - هیچ ابزار، توضیح یا خروجی اضافه‌ای ننویس.
+                        - هرگونه نشانه‌گذاری یا فرمت خاص (مانند ایتالیک) را حفظ کن.
+
+                        اگر اصطلاحات فنی خاصی وجود داشت، ترجمه دقیق و قابل فهم برای عموم ارائه بده. ترجمه باید هم از نظر زبانی صحیح باشد و هم برای نمایش سریع روی صفحه مناسب باشد.
+
+                        اگر زیرنویس ورودی به صورت خودکار توسط یوتیوب ساخته شده و دارای اشتباهات نگارشی، کلمات ناقص یا جملات بی‌معنی بود، ابتدا متن هر بخش را به صورت صحیح و قابل فهم بازنویسی کن و سپس به زبان مقصد ترجمه کن. کلمات اشتباه یا ناقص را اصلاح کن و جملات نامفهوم را تا حد امکان قابل فهم و روان کن.
+                        </textarea>
+                        <p class="note" data-en="Instructions for the AI model." data-fa="دستورالعمل‌ها برای مدل هوش مصنوعی.">Instructions for the AI model.</p>
+                    </div>
+                </div>
+            </details>
+
+            <div class="submit-container">
+                <button id="submit-button" type="submit" class="button primary-button">
+                    <span class="button-text" data-en="Translate" data-fa="ترجمه">Translate</span>
+                    <span class="shortcut-hint">(Ctrl+Enter)</span>
+                </button>
+            </div>
+        </form>
+
+        <div id="live-translation-table-container" style="display:none;">
+            <table id="live-translation-table">
+                <thead>
+                    <tr>
+                        <th style="width:40%;" data-en="Source" data-fa="منبع">Source</th>
+                        <th style="width:50%;" data-en="Translation" data-fa="ترجمه">Translation</th>
+                        <th style="width:10%;" data-en="Actions" data-fa="عملیات">Actions</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="progress-container" id="progress-container">
+            <div class="progress-bar">
+                <div class="progress" id="progress"></div>
+            </div>
+            <div class="progress-text" id="progress-text" data-en="0% Complete" data-fa="۰٪ تکمیل شده">0% Complete</div>
+            <div class="progress-details">
+                <span id="chunk-status" data-en="Processing chunk: 0/0" data-fa="پردازش بخش: ۰/۰">Processing chunk: 0/0</span>
+                <span id="time-estimate" data-en="Estimated time: calculating..." data-fa="زمان تخمینی: در حال محاسبه...">Estimated time: calculating...</span>
+            </div>
+        </div>
+
+        <div class="download-link" id="download-link"></div>
+        <div class="error-message" id="error-message"></div>
+
+        <div id="manual-retry-section" style="display:none; margin: 20px 0;">
+            <h3 style="font-size:1.1rem; margin-bottom:10px;" data-en="Manual Retry for Failed Chunks" data-fa="تلاش مجدد دستی برای بخش‌های ناموفق">Manual Retry for Failed Chunks</h3>
+            <div id="retry-chunks-list"></div>
+            <button id="retry-failed-chunks-btn" class="button primary-button" style="margin-top:10px;" data-en="Retry Failed Chunks" data-fa="تلاش مجدد بخش‌های ناموفق">Retry Failed Chunks</button>
+            <p style="font-size:0.9rem; color:#888; margin-top:8px;" data-en="You can select a different API/model before retrying." data-fa="می‌توانید قبل از تلاش مجدد، API/مدل دیگری انتخاب کنید.">You can select a different API/model before retrying.</p>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p data-en="If you ever feel unloved, just know I love you - Created with ❤️ for subtitle translation." data-fa="اگر زمانی احساس کردی دوست‌داشتنی نیستی، بدان که من دوستت دارم - ساخته شده با ❤️ برای ترجمه زیرنویس.">If you ever feel unloved, just know I love you - Created with ❤️ for subtitle translation.</p>
+        <div class="donate-section">
+            <a href="https://reymit.ir/ho3seintork" class="donate-button" id="donateButton" target="_blank" rel="noopener" data-en="Support This Project" data-fa="حمایت از این پروژه">Support This Project</a>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/rtl-detect@1.0.3/rtl-detect.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/rtlify@0.2.2/rtlify.min.js"></script>
+    <script>
+        // --- Localization ---
+        const translations = {
+            en: {
+                "app-title": "Multi-API Subtitle Translator",
+                "page-title": "Subtitle Translator",
+                "lang-toggle-text": "فارسی",
+                "clear-memory-title": "Clear translation memory",
+                "theme-toggle-title": "Toggle light/dark theme",
+                "input-method-label": "Input Method:",
+                "upload-file-label": "Upload File",
+                "paste-text-label": "Paste Text",
+                "upload-subtitle-label": "Upload Subtitle File (SRT, VTT, SSA, ASS):",
+                "dropzone-message": "Drag & drop subtitle file here<br>or click to browse",
+                "paste-srt-label": "Paste SRT Content:",
+                "youtube-url-label": "YouTube Video URL (auto-fetch subtitles):",
+                "youtube-note": "Paste a YouTube link to auto-download English subtitles for translation.",
+                "api-provider-label": "Select API Provider:",
+                "gemini-api-key-label": "Gemini API Key:",
+                "remember-key-label": "Remember key",
+                "gemini-note": "Get your API key from <a href='https://aistudio.google.com/app/apikey' target='_blank'>Google AI Studio</a>.",
+                "gemini-model-label": "Gemini Model:",
+                "gemini-quota-note": "If you get quota errors, try an older or \"flash\" model.",
+                "openai-api-key-label": "OpenAI API Key:",
+                "openai-note": "Get your API key from <a href='https://platform.openai.com/api-keys' target='_blank'>OpenAI Platform</a>.",
+                "openai-model-label": "OpenAI Model:",
+                "deepseek-api-key-label": "Deepseek API Key:",
+                "deepseek-note": "Get your API key from <a href='https://platform.deepseek.com' target='_blank'>Deepseek Platform</a>.",
+                "deepseek-model-label": "Deepseek Model:",
+                "custom-api-url-label": "Custom API Endpoint:",
+                "custom-api-url-note": "Endpoint must be OpenAI-compatible (chat/completions) or similar.",
+                "custom-api-key-label": "Custom API Key:",
+                "custom-model-name-label": "Custom Model Name:",
+                "custom-extra-headers-label": "Extra Headers (JSON):",
+                "custom-extra-headers-note": "Optional: Add extra headers as JSON.",
+                "target-language-label": "Target Language:",
+                "advanced-settings-label": "Advanced Settings",
+                "advanced-settings-warning": "⚠️ Adjusting these settings can affect performance, cost, and translation quality.",
+                "temperature-label": "Temperature:",
+                "temperature-note": "Controls randomness (0.0-2.0). Higher values = more creative/random.",
+                "base-delay-label": "Base Delay (ms):",
+                "base-delay-note": "Delay between successful chunk requests.",
+                "chunk-count-label": "Number of Chunks:",
+                "chunk-count-note": "Split subtitles into this many parts (1-100).",
+                "system-prompt-label": "System Prompt / Instructions:",
+                "system-prompt-note": "Instructions for the AI model.",
+                "translate-button": "Translate",
+                "live-table-source-header": "Source",
+                "live-table-translation-header": "Translation",
+                "live-table-actions-header": "Actions",
+                "progress-text-initial": "0% Complete",
+                "chunk-status-initial": "Processing chunk: 0/0",
+                "time-estimate-initial": "Estimated time: calculating...",
+                "manual-retry-title": "Manual Retry for Failed Chunks",
+                "retry-failed-button": "Retry Failed Chunks",
+                "retry-note": "You can select a different API/model before retrying.",
+                "footer-message": "If you ever feel unloved, just know I love you - Created with ❤️ for subtitle translation.",
+                "donate-button": "Support This Project",
+                "error-upload-file": "Please upload a subtitle file.",
+                "error-paste-srt": "Please paste subtitle content.",
+                "error-custom-api-url": "Please enter your custom API endpoint.",
+                "error-custom-model-name": "Please enter your custom model name.",
+                "error-api-key": "Please enter your {apiProvider} API key.",
+                "error-invalid-provider": "Invalid API provider selected.",
+                "error-no-content-translate": "No content to translate. The SRT file might be empty or invalid.",
+                "error-all-chunks-failed": "All translation chunks failed. Please check errors and API settings.",
+                "error-translation-failed": "Translation process failed: {errorMessage}",
+                "error-retry-no-data": "Cannot retry: Original chunk data not found.",
+                "error-retry-custom-api": "Custom API URL or Model missing for retry.",
+                "error-retry-api-key": "API Key for {apiProvider} missing for retry.",
+                "alert-no-chunks-retry": "No chunks selected for retry.",
+                "alert-subtitle-fetch-failed": "Failed to fetch subtitles or subtitles not available in English. Please try another video or paste SRT manually.\n(Note: Direct fetching from browser has limitations; a backend service is more reliable.)",
+                "alert-subtitle-fetch-success": "Subtitles fetched successfully! Ready for translation.",
+                "alert-subtitle-fetch-error": "An error occurred while trying to fetch subtitles: {errorMessage}",
+                "alert-keys-cleared": "Stored API keys and related \"remember\" preferences cleared from browser storage.",
+                "status-translating-chunk": "Translating...",
+                "status-retrying-chunk": "Retrying...",
+                "status-retranslating-chunk": "Retranslating chunk #{chunkNum}...",
+                "status-retranslation-attempt-finished": "Chunk #{chunkNum} retranslation attempt finished.",
+                "status-retrying-selected-chunks": "Retrying selected chunks...",
+                "status-retrying-batch": "Retrying {count} chunks... ({percent}%)",
+                "status-batch-retry-finished": "Batch retry finished.",
+                "download-subtitle-link": "<i class=\"fas fa-download\"></i> Download Translated Subtitle",
+                "no-download-content": "<span>No valid content to download after retry.</span>",
+                "translation-complete-success": "Translation complete! {successful}/{total} chunks successful.",
+                "translation-complete-no-download": "Translation finished, but no valid output to download.",
+                 "use-proxy-label": "Use Proxy",
+                 "use-proxy-note": "Enable if direct API access is blocked (e.g., sanctioned regions).",
+
+
+            },
+            fa: {
+                "app-title": "مترجم زیرنویس چند API",
+                "page-title": "مترجم زیرنویس",
+                "lang-toggle-text": "English",
+                "clear-memory-title": "پاک کردن حافظه ترجمه",
+                "theme-toggle-title": "تغییر پوسته روشن/تاریک",
+                "input-method-label": "روش ورودی:",
+                "upload-file-label": "بارگذاری فایل",
+                "paste-text-label": "چسباندن متن",
+                "upload-subtitle-label": "بارگذاری فایل زیرنویس (SRT, VTT, SSA, ASS):",
+                "dropzone-message": "فایل زیرنویس را اینجا بکشید و رها کنید<br>یا برای انتخاب کلیک کنید",
+                "paste-srt-label": "محتوای SRT را بچسبانید:",
+                "youtube-url-label": "آدرس ویدیوی یوتیوب (دریافت خودکار زیرنویس):",
+                "youtube-note": "لینک یوتیوب را برای دانلود خودکار زیرنویس انگلیسی جهت ترجمه، وارد کنید.",
+                "api-provider-label": "انتخاب ارائه‌دهنده API:",
+                "gemini-api-key-label": "کلید Gemini API:",
+                "remember-key-label": "ذخیره کلید",
+                "gemini-note": "کلید API خود را از <a href='https://aistudio.google.com/app/apikey' target='_blank'>Google AI Studio</a> دریافت کنید.",
+                "gemini-model-label": "مدل Gemini:",
+                "gemini-quota-note": "در صورت بروز خطای سهمیه، مدل قدیمی‌تر یا 'flash' را امتحان کنید.",
+                "openai-api-key-label": "کلید OpenAI API:",
+                "openai-note": "کلید API خود را از <a href='https://platform.openai.com/api-keys' target='_blank'>OpenAI Platform</a> دریافت کنید.",
+                "openai-model-label": "مدل OpenAI:",
+                "deepseek-api-key-label": "کلید Deepseek API:",
+                "deepseek-note": "کلید API خود را از <a href='https://platform.deepseek.com' target='_blank'>Deepseek Platform</a> دریافت کنید.",
+                "deepseek-model-label": "مدل Deepseek:",
+                "custom-api-url-label": "نقطه پایانی API سفارشی:",
+                "custom-api-url-note": "نقطه پایانی باید با OpenAI (chat/completions) یا مشابه سازگار باشد.",
+                "custom-api-key-label": "کلید API سفارشی:",
+                "custom-model-name-label": "نام مدل سفارشی:",
+                "custom-extra-headers-label": "هدرهای اضافی (JSON):",
+                "custom-extra-headers-note": "اختیاری: هدرهای اضافی را به صورت JSON اضافه کنید.",
+                "target-language-label": "زبان مقصد:",
+                "advanced-settings-label": "تنظیمات پیشرفته",
+                "advanced-settings-warning": "⚠️ تنظیم این موارد می‌تواند بر عملکرد، هزینه و کیفیت ترجمه تأثیر بگذارد.",
+                "temperature-label": "دما (Temperature):",
+                "temperature-note": "کنترل خلاقیت (۰.۰-۲.۰). مقادیر بالاتر = خلاقیت/تصادفی بودن بیشتر.",
+                "base-delay-label": "تأخیر پایه (میلی‌ثانیه):",
+                "base-delay-note": "تأخیر بین درخواست‌های موفق هر بخش.",
+                "chunk-count-label": "تعداد بخش‌ها:",
+                "chunk-count-note": "زیرنویس را به این تعداد بخش تقسیم کن (۱-۱۰۰).",
+                "system-prompt-label": "دستورالعمل سیستم/راهنما:",
+                "system-prompt-note": "دستورالعمل‌ها برای مدل هوش مصنوعی.",
+                "translate-button": "ترجمه",
+                "live-table-source-header": "منبع",
+                "live-table-translation-header": "ترجمه",
+                "live-table-actions-header": "عملیات",
+                "progress-text-initial": "۰٪ تکمیل شده",
+                "chunk-status-initial": "پردازش بخش: ۰/۰",
+                "time-estimate-initial": "زمان تخمینی: در حال محاسبه...",
+                "manual-retry-title": "تلاش مجدد دستی برای بخش‌های ناموفق",
+                "retry-failed-button": "تلاش مجدد بخش‌های ناموفق",
+                "retry-note": "می‌توانید قبل از تلاش مجدد، API/مدل دیگری انتخاب کنید.",
+                "footer-message": "اگر زمانی احساس کردی دوست‌داشتنی نیستی، بدان که من دوستت دارم - ساخته شده با ❤️ برای ترجمه زیرنویس.",
+                "donate-button": "حمایت از این پروژه",
+                "error-upload-file": "لطفاً یک فایل زیرنویس بارگذاری کنید.",
+                "error-paste-srt": "لطفاً محتوای زیرنویس را بچسبانید.",
+                "error-custom-api-url": "لطفاً نقطه پایانی API سفارشی خود را وارد کنید.",
+                "error-custom-model-name": "لطفاً نام مدل سفارشی خود را وارد کنید.",
+                "error-api-key": "لطفاً کلید API {apiProvider} خود را وارد کنید.",
+                "error-invalid-provider": "ارائه‌دهنده API نامعتبر انتخاب شده است.",
+                "error-no-content-translate": "محتوایی برای ترجمه وجود ندارد. فایل SRT ممکن است خالی یا نامعتبر باشد.",
+                "error-all-chunks-failed": "ترجمه تمام بخش‌ها ناموفق بود. لطفاً خطاها و تنظیمات API را بررسی کنید.",
+                "error-translation-failed": "فرآیند ترجمه ناموفق بود: {errorMessage}",
+                "error-retry-no-data": "امکان تلاش مجدد وجود ندارد: داده‌های بخش اصلی یافت نشد.",
+                "error-retry-custom-api": "آدرس API سفارشی یا مدل برای تلاش مجدد موجود نیست.",
+                "error-retry-api-key": "کلید API برای {apiProvider} جهت تلاش مجدد موجود نیست.",
+                "alert-no-chunks-retry": "هیچ بخشی برای تلاش مجدد انتخاب نشده است.",
+                "alert-subtitle-fetch-failed": "دریافت زیرنویس ناموفق بود یا زیرنویس به زبان انگلیسی موجود نیست. لطفاً ویدیوی دیگری را امتحان کنید یا SRT را دستی وارد کنید.\n(توجه: دریافت مستقیم از مرورگر محدودیت‌هایی دارد؛ استفاده از سرویس بک‌اند قابل اطمینان‌تر است.)",
+                "alert-subtitle-fetch-success": "زیرنویس با موفقیت دریافت شد! آماده برای ترجمه.",
+                "alert-subtitle-fetch-error": "هنگام دریافت زیرنویس خطایی رخ داد: {errorMessage}",
+                "alert-keys-cleared": "کلیدهای API ذخیره شده و تنظیمات مربوط به «ذخیره کلید» از حافظه مرورگر پاک شدند.",
+                "status-translating-chunk": "در حال ترجمه...",
+                "status-retrying-chunk": "در حال تلاش مجدد...",
+                "status-retranslating-chunk": "در حال ترجمه مجدد بخش #{chunkNum}...",
+                "status-retranslation-attempt-finished": "تلاش برای ترجمه مجدد بخش #{chunkNum} پایان یافت.",
+                "status-retrying-selected-chunks": "در حال تلاش مجدد بخش‌های انتخاب شده...",
+                "status-retrying-batch": "در حال تلاش مجدد {count} بخش... ({percent}٪)",
+                "status-batch-retry-finished": "تلاش مجدد دسته‌ای پایان یافت.",
+                "download-subtitle-link": "<i class=\"fas fa-download\"></i> دانلود زیرنویس ترجمه شده",
+                "no-download-content": "<span>محتوای معتبری برای دانلود پس از تلاش مجدد وجود ندارد.</span>",
+                "translation-complete-success": "ترجمه کامل شد! {successful}/{total} بخش موفقیت‌آمیز بود.",
+                "translation-complete-no-download": "ترجمه تمام شد، اما خروجی معتبری برای دانلود وجود ندارد.",
+                "use-proxy-label": "استفاده از پروکسی",
+                "use-proxy-note": "اگر دسترسی مستقیم به API مسدود است فعال کنید (مثلاً مناطق تحریم شده).",
+            }
+        };
+        let currentLang = localStorage.getItem('uiLang') || 'en';
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('uiLang', lang);
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+
+            document.querySelectorAll('[data-en]').forEach(el => {
+                const key = el.id || el.getAttribute('data-key') || el.dataset.en.toLowerCase().replace(/\s/g, '-').replace(/[^a-z0-9-]/g, ''); 
+                let text = translations[lang][key] || el.getAttribute(`data-${lang}`);
+
+                if (!text) { 
+                    const enText = el.dataset.en;
+                    for (const tKey in translations.en) {
+                        if (translations.en[tKey] === enText) {
+                           text = translations[lang][tKey];
+                           break;
+                        }
+                    }
+                }
+                 if (!text && el.dataset[lang]) text = el.dataset[lang]; 
+
+                if (text) {
+                    if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'password' || el.type === 'number')) {
+                        if (el.placeholder) el.placeholder = text;
+                    } else if (el.title) {
+                         el.title = text;
+                    }
+                    else {
+                        el.innerHTML = text; 
+                    }
+                }
+            });
+            document.getElementById('language-toggle-text').textContent = translations[lang]['lang-toggle-text'];
+            if (lang === 'fa') {
+                 document.body.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"; 
+            } else {
+                 document.body.style.fontFamily = "'Segoe UI', Arial, sans-serif";
+            }
+        }
+        // --- End Localization ---
+
+
+        // DOM Elements
+        const apiProviderSelect = document.getElementById('api_provider');
+        const geminiApiSection = document.getElementById('gemini-api-section');
+        const openaiApiSection = document.getElementById('openai-api-section');
+        const deepseekApiSection = document.getElementById('deepseek-api-section');
+        const customApiSection = document.getElementById('custom-api-section');
+        const themeToggle = document.getElementById('themeToggle');
+        const languageToggle = document.getElementById('language-toggle');
+        const fileMethodRadio = document.querySelector('input[value="file"]');
+        const textMethodRadio = document.querySelector('input[value="text"]');
+        const fileInputSection = document.getElementById('file-input');
+        const textInputSection = document.getElementById('text-input');
+        const translateForm = document.getElementById('translate-form');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress');
+        const progressTextEl = document.getElementById('progress-text');
+        const chunkStatusEl = document.getElementById('chunk-status');
+        const timeEstimateEl = document.getElementById('time-estimate');
+        const downloadLink = document.getElementById('download-link');
+        const errorMessage = document.getElementById('error-message');
+        const clearMemoryButton = document.getElementById('clear-memory-button');
+        const liveTableContainer = document.getElementById('live-translation-table-container');
+        const liveTable = document.getElementById('live-translation-table');
+        const liveTableBody = liveTable ? liveTable.querySelector('tbody') : null;
+
+
+        Dropzone.autoDiscover = false;
+        if (document.getElementById("dropzone-upload")) {
+            const myDropzone = new Dropzone("#dropzone-upload", {
+                url: "#", autoProcessQueue: false, maxFiles: 1, acceptedFiles: ".srt,.vtt,.ssa,.ass", addRemoveLinks: true,
+                dictDefaultMessage: document.querySelector('#dropzone-upload .dz-message p').innerHTML, 
+                init: function() { window.myDropzone = this; }
+            });
+        }
+
+        function toggleTheme() {
+            const isDarkMode = document.body.classList.toggle('dark-mode');
+            themeToggle.innerHTML = isDarkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            localStorage.setItem('darkMode', isDarkMode ? 'true' : 'false');
+        }
+
+        apiProviderSelect.addEventListener('change', function() {
+            const provider = this.value;
+            geminiApiSection.style.display = provider === 'gemini' ? 'block' : 'none';
+            openaiApiSection.style.display = provider === 'openai' ? 'block' : 'none';
+            deepseekApiSection.style.display = provider === 'deepseek' ? 'block' : 'none';
+            customApiSection.style.display = provider === 'custom' ? 'block' : 'none';
+        });
+
+        document.querySelectorAll('.toggle-password').forEach(button => {
+            button.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-for');
+                const input = document.getElementById(targetId);
+                const icon = this.querySelector('i');
+                if (input.type === 'password') {
+                    input.type = 'text'; icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password'; icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye');
+                }
+            });
+        });
+
+        fileMethodRadio.addEventListener('change', function() {
+            if (this.checked) { fileInputSection.style.display = 'block'; textInputSection.style.display = 'none'; }
+        });
+        textMethodRadio.addEventListener('change', function() {
+            if (this.checked) { fileInputSection.style.display = 'none'; textInputSection.style.display = 'block'; }
+        });
+
+        function getLocalizedString(key, replacements = {}) {
+            let str = translations[currentLang][key] || translations['en'][key] || `[${key}]`;
+            for (const placeholder in replacements) {
+                str = str.replace(`{${placeholder}}`, replacements[placeholder]);
+            }
+            return str;
+        }
+
+        function showError(messageKey, replacements = {}) {
+            errorMessage.textContent = getLocalizedString(messageKey, replacements);
+            errorMessage.style.display = 'block';
+            if (progressContainer) progressContainer.style.display = 'none';
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsText(file);
+            });
+        }
+
+        // --- START MODIFIED SECTION ---
+        function splitSrtIntoChunks(srtText, chunkCount) {
+            const srtBlocks = [];
+            const lines = srtText.replace(/\r\n/g, '\n').split('\n');
+            let currentBlockBuffer = [];
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (/^\d+$/.test(line.trim()) && currentBlockBuffer.length > 0 && currentBlockBuffer.some(l => l.includes('-->'))) {
+                    if (currentBlockBuffer.join('\n').trim() !== "") {
+                        srtBlocks.push(currentBlockBuffer.join('\n'));
+                    }
+                    currentBlockBuffer = [line];
+                } else {
+                    currentBlockBuffer.push(line);
+                }
+            }
+            if (currentBlockBuffer.join('\n').trim() !== "") {
+                srtBlocks.push(currentBlockBuffer.join('\n'));
+            }
+
+            if (srtBlocks.length === 0) return [];
+
+            const numChunks = Math.max(1, Math.min(chunkCount, srtBlocks.length));
+            const idealChunkSizeInBlocks = Math.ceil(srtBlocks.length / numChunks);
+            const finalChunks = [];
+            for (let i = 0; i < srtBlocks.length; i += idealChunkSizeInBlocks) {
+                let chunkContent = srtBlocks.slice(i, i + idealChunkSizeInBlocks).join('\n\n');
+                if (chunkContent.trim() !== "") { // Ensure we don't add empty chunks
+                     finalChunks.push(chunkContent + '\n\n'); // Add double newline after each block set
+                }
+            }
+             // Clean up trailing newlines from the very last chunk
+            if (finalChunks.length > 0) {
+                finalChunks[finalChunks.length - 1] = finalChunks[finalChunks.length - 1].trimEnd();
+            }
+            return finalChunks.filter(chunk => chunk.trim() !== "");
+        }
+
+        function mergeChunks(translatedChunks) {
+            return translatedChunks
+                .filter(chunk => chunk && typeof chunk === 'string' && !chunk.startsWith('[ERROR]'))
+                .map(chunk => chunk.trim())
+                .join('\n\n')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim(); // Trim at the very end before adding final newline
+        }
+        
+        function fixSrtStructure(srtText) {
+            if (!srtText || typeof srtText !== 'string' || srtText.trim() === '') {
+                return '';
+            }
+            let cleanSrt = srtText.replace(/\r\n/g, '\n').replace(/^\uFEFF/, '');
+            cleanSrt = cleanSrt.split('\n').filter(line => {
+                const trimmedLine = line.trim().toLowerCase();
+                return !(/^srt$/i.test(trimmedLine) ||
+                         /^\[srt\]$/i.test(trimmedLine) ||
+                         /^subtitle$/i.test(trimmedLine) ||
+                         /^subtitles$/i.test(trimmedLine) ||
+                         /^here is the srt:$/i.test(trimmedLine) ||
+                         /^here are the subtitles:$/i.test(trimmedLine) ||
+                         /^```srt/.test(trimmedLine) || 
+                         /^```$/.test(trimmedLine) 
+                        );
+            }).join('\n');
+
+            const rawBlocks = cleanSrt.split(/\n\s*\n/); 
+            const validBlocks = [];
+            let srtIndex = 1;
+
+            for (const rawBlock of rawBlocks) {
+                if (rawBlock.trim() === '') continue;
+                const lines = rawBlock.split('\n').map(l => l.trimEnd());
+                let timeLine = '';
+                const textLines = [];
+                let foundTime = false;
+
+                for (let i = 0; i < lines.length; i++) {
+                    const currentLine = lines[i].trim();
+                    if (/^\d{1,2}:\d{2}:\d{2}[,.]\d{3}\s*-->\s*\d{1,2}:\d{2}:\d{2}[,.]\d{3}/.test(currentLine)) {
+                        if (!foundTime) {
+                            timeLine = currentLine.replace('.', ',');
+                            foundTime = true;
+                        } else {
+                            textLines.push(lines[i]);
+                        }
+                    } else if (/^\d+$/.test(currentLine)) {
+                        if (!foundTime && (i + 1 < lines.length && /^\d{1,2}:\d{2}:\d{2}[,.]\d{3}\s*-->\s*\d{1,2}:\d{2}:\d{2}[,.]\d{3}/.test(lines[i+1].trim()))) {
+                            // This is a number before a valid timestamp, ignore it as we renumber.
+                        } else {
+                             textLines.push(lines[i]); // Treat as text if not a clear number for a new block
+                        }
+                    } else if (lines[i].trim() !== '' || (textLines.length > 0 && lines[i] === '')) { // Keep empty lines if they are part of multi-line text
+                        textLines.push(lines[i]);
+                    }
+                }
+
+                if (timeLine && textLines.join('').trim() !== '') {
+                    let block = srtIndex + '\n';
+                    block += timeLine + '\n';
+                    block += textLines.join('\n').trimEnd();
+                    validBlocks.push(block);
+                    srtIndex++;
+                }
+            }
+            if (validBlocks.length === 0) return "";
+            return validBlocks.join('\n\n') + '\n'; 
+        }
+
+        function isPersianLike(langName) {
+            if (!langName || typeof langName !== 'string') return false;
+            return /fa|farsi|persian/i.test(langName.toLowerCase());
+        }
+
+        function postProcessTranslatedChunkText(text, targetLang) {
+            if (typeof text !== 'string') return (text || '').trim();
+            let processedText = text
+                .replace(/^```srt\s*/i, '')
+                .replace(/\s*```$/, '')
+                .replace(/^[\s\S]*?(\d+\s*\n\d{2}:\d{2}:\d{2}[,.]\d{3}\s*-->)/, '$1')
+                .trim();
+
+            if (isPersianLike(targetLang) && typeof rtlit === 'function') {
+                const lines = processedText.split('\n');
+                const rtlProcessedLines = lines.map(line => {
+                    if (!/^\d+$/.test(line.trim()) && !/-->/.test(line)) {
+                        return rtlit(line);
+                    }
+                    return line;
+                });
+                processedText = rtlProcessedLines.join('\n');
+            }
+            return processedText.trim();
+        }
+
+        function applyRtlToSrt(srtText) {
+            if (!srtText || typeof srtText !== 'string' || typeof rtlit !== 'function') {
+                if (typeof rtlit !== 'function') {
+                    console.warn("rtlify library not found. RTL formatting might be incomplete.");
+                }
+                return srtText;
+            }
+            const targetLangInput = document.getElementById('lang-input').value;
+            if (!isPersianLike(targetLangInput)) {
+                return srtText;
+            }
+
+            let blocks = srtText.split(/\n\n(?!\n)/); 
+            let outBlocks = blocks.map(block => {
+                if (!block.trim()) return block;
+                let lines = block.split('\n');
+                let timeIndex = lines.findIndex(l => l.includes('-->'));
+                if (timeIndex === -1) return block;
+                let textLines = lines.slice(timeIndex + 1);
+                if (textLines.every(line => !line.trim())) return block;
+                
+                let processedTextLines = textLines.map(line => rtlit(line));
+                return [...lines.slice(0, timeIndex + 1), ...processedTextLines].join('\n');
+            });
+            return outBlocks.join('\n\n').trim() + '\n';
+        }
+        // --- END MODIFIED SECTION ---
+
+
+        function isRtlText(text) {
+            if (!text) return false;
+            if (window.rtlDetect && typeof rtlDetect.isRtlLang === 'function') {
+                const rtlLangs = ['fa', 'ar', 'he', 'ur', 'yi', 'syc', 'dv'];
+                const langPart = String(text).substring(0, 2).toLowerCase();
+                if (rtlLangs.includes(langPart)) return true;
+                return rtlDetect.isRtlLang(text) || /[\u0600-\u06FF\u0750-\u077F\u0590-\u05FF]/.test(text);
+            }
+            return /[\u0600-\u06FF\u0750-\u077F\u0590-\u05FF]/.test(text);
+        }
+
+
+        function isTranslationError(text) {
+            if (!text || typeof text !== 'string') return true;
+            const trimmedText = text.trim();
+            if (trimmedText === '') return true;
+            if (trimmedText.startsWith('[ERROR]')) return true;
+            const errorKeywords = ['error', 'quota', 'unexpected', 'unsupported', 'failed', 'limit', 'cannot translate', 'unable to process', 'invalid request', 'api key', 'authentication', 'forbidden', 'not found', 'no translation available', 'try again later'];
+            for (const keyword of errorKeywords) { if (trimmedText.toLowerCase().includes(keyword)) return true; }
+            const instructionPhrases = ['translate the following', 'translation:', 'output:', 'here is the translation'];
+            for (const phrase of instructionPhrases) { if (trimmedText.toLowerCase().startsWith(phrase) && trimmedText.length < phrase.length + 25) return true; } 
+            if (!/\d{1,2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{1,2}:\d{2}:\d{2},\d{3}/.test(trimmedText) && trimmedText.length < 50 && !trimmedText.includes('\n')) { 
+                 if (trimmedText.toLowerCase().includes("i cannot fulfill this request") || trimmedText.toLowerCase().includes("i am unable to") || trimmedText.toLowerCase().includes("as an ai")) return true;
+            }
+            return false;
+        }
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
+        }
+
+        function renderLiveTranslationTable(sourceChunks, translatedChunks, onCorrect) {
+            if (!liveTableBody) return;
+            liveTableBody.innerHTML = '';
+            const displayChunks = Array.isArray(sourceChunks) ? sourceChunks : [sourceChunks];
+            const displayTranslations = Array.isArray(translatedChunks) ? translatedChunks : [translatedChunks];
+
+            for (let i = 0; i < displayChunks.length; i++) {
+                const src = displayChunks[i] || '';
+                const trn = displayTranslations[i] || '';
+                const srcIsRtl = isRtlText(src);
+                const trnIsRtl = isRtlText(trn) || (isPersianLike(document.getElementById('lang-input').value) && trn); 
+                const errorInTranslation = isTranslationError(trn);
+
+                const tr = document.createElement('tr');
+                const tdSrc = document.createElement('td');
+                tdSrc.className = srcIsRtl ? 'rtl-cell' : 'ltr-cell';
+                tdSrc.innerHTML = `<pre style="margin:0;background:none;border:none;padding:0;font-family:inherit;white-space:pre-wrap;word-break:break-word;">${escapeHtml(src)}</pre>`;
+                const tdTrn = document.createElement('td');
+                tdTrn.className = trnIsRtl ? 'rtl-cell' : 'ltr-cell';
+                if (errorInTranslation) tdTrn.classList.add('translation-error');
+                tdTrn.innerHTML = `<pre style="margin:0;background:none;border:none;padding:0;font-family:inherit;white-space:pre-wrap;word-break:break-word;">${escapeHtml(trn)}</pre>`;
+                const tdAct = document.createElement('td');
+                tdAct.style.textAlign = 'center';
+                if (errorInTranslation) {
+                    const btn = document.createElement('button');
+                    btn.className = 'correction-btn';
+                    btn.innerHTML = '<i class="fas fa-redo"></i> Retry';
+                    btn.onclick = () => onCorrect(i);
+                    tdAct.appendChild(btn);
+                } else {
+                    tdAct.innerHTML = '<i class="fas fa-check" style="color:green;"></i>';
+                }
+                tr.appendChild(tdSrc); tr.appendChild(tdTrn); tr.appendChild(tdAct);
+                liveTableBody.appendChild(tr);
+            }
+        }
+
+        async function callTranslationAPI(apiFn, apiKey, model, prompt, targetLang, chunk, temperature, customApiUrl, customExtraHeaders) {
+            if (apiFn === translateWithCustom) {
+                return await apiFn(customApiUrl, apiKey, model, prompt, targetLang, chunk, temperature, customExtraHeaders);
+            }
+            return await apiFn(apiKey, model, prompt, targetLang, chunk, temperature);
+        }
+        
+        async function translateWithOpenAI(apiKey, model, prompt, targetLang, chunk, temperature) {
+            const endpoint = "https://api.openai.com/v1/chat/completions";
+            const body = { model, messages: [{ role: "system", content: `${prompt}\nTarget language: ${targetLang}` },{ role: "user", content: `Translate the following subtitle lines to ${targetLang}:\n${chunk}` }], temperature, max_tokens: 4096 };
+            const resp = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey }, body: JSON.stringify(body) });
+            if (!resp.ok) { let e = await resp.text(); try { e = JSON.parse(e).error.message; } catch (_) {} throw new Error(`HTTP ${resp.status}: ${e}`); }
+            const data = await resp.json();
+            const content = data.choices?.[0]?.message?.content || "";
+            return postProcessTranslatedChunkText(content, targetLang); // Changed
+        }
+
+        async function translateWithGemini(apiKey, model, prompt, targetLang, chunk, temperature) {
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            const body = { contents: [{ parts: [{ "text": `${prompt}\nTarget language: ${targetLang}\n\nTranslate the following subtitle lines to ${targetLang}:\n${chunk}` }] }], generationConfig: { temperature, maxOutputTokens: 8192 }, safetySettings: [{ "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" },{ "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" },{ "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE" },{ "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE" }] };
+            const resp = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+            if (!resp.ok) { let e = await resp.text(); try { e = JSON.parse(e).error.message; } catch (_) {} throw new Error(`HTTP ${resp.status}: ${e}`); }
+            const data = await resp.json();
+            if (data.promptFeedback?.blockReason) throw new Error(`Blocked: ${data.promptFeedback.blockReason}`);
+            const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            return postProcessTranslatedChunkText(content, targetLang); // Changed
+        }
+        
+        async function translateWithDeepseek(apiKey, model, prompt, targetLang, chunk, temperature) {
+            const endpoint = "https://api.deepseek.com/chat/completions";
+            const body = { model, messages: [{ role: "system", content: `${prompt}\nTarget language: ${targetLang}` },{ role: "user", content: `Translate the following subtitle lines to ${targetLang}:\n${chunk}` }], temperature, max_tokens: 4096 };
+            const resp = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey }, body: JSON.stringify(body) });
+            if (!resp.ok) { let e = await resp.text(); try { e = JSON.parse(e).error.message; } catch (_) {} throw new Error(`HTTP ${resp.status}: ${e}`); }
+            const data = await resp.json();
+            const content = data.choices?.[0]?.message?.content || "";
+            return postProcessTranslatedChunkText(content, targetLang); // Changed
+        }
+
+        async function translateWithCustom(customApiUrl, apiKey, model, prompt, targetLang, chunk, temperature, customExtraHeadersString) {
+            if (!customApiUrl || !customApiUrl.startsWith('http')) throw new Error('Invalid Custom API Endpoint URL');
+            const body = { model, messages: [{ role: "system", content: `${prompt}\nTarget language: ${targetLang}` },{ role: "user", content: `Translate the following subtitle lines to ${targetLang}:\n${chunk}` }], temperature, max_tokens: 4096 };
+            let headers = { "Content-Type": "application/json" };
+            if (apiKey) headers["Authorization"] = "Bearer " + apiKey;
+            if (customExtraHeadersString) try { headers = { ...headers, ...JSON.parse(customExtraHeadersString) }; } catch (e) { console.warn("Invalid custom_extra_headers JSON:", e); }
+            const resp = await fetch(customApiUrl, { method: "POST", headers, body: JSON.stringify(body) });
+            if (!resp.ok) { let e = await resp.text(); try { e = JSON.parse(e).error.message || JSON.parse(e).message ; } catch (_) {} throw new Error(`HTTP ${resp.status}: ${e}`); }
+            const data = await resp.json();
+            const content = data.choices?.[0]?.message?.content || "";
+            return postProcessTranslatedChunkText(content, targetLang); // Changed
+        }
+
+        async function processTranslationCycle(isRetry = false, specificChunkIndex = -1) {
+            let srtContent = '';
+            if (!isRetry) { 
+                if (fileMethodRadio.checked) {
+                    if (!window.myDropzone || window.myDropzone.files.length === 0) { showError('error-upload-file'); return; }
+                    srtContent = await readFileAsText(window.myDropzone.files[0]);
+                } else {
+                    srtContent = document.getElementById('srt_text').value.trim();
+                    if (!srtContent) { showError('error-paste-srt'); return; }
+                }
+            }
+
+            const apiProvider = apiProviderSelect.value;
+            let apiKey = '', model = '', customApiUrl = '', customExtraHeaders = '';
+            let translationFunction;
+
+            switch(apiProvider) {
+                case 'gemini':
+                    apiKey = document.getElementById('gemini_api_key').value; model = document.getElementById('gemini_model').value; translationFunction = translateWithGemini; break;
+                case 'openai':
+                    apiKey = document.getElementById('openai_api_key').value; model = document.getElementById('openai_model').value; translationFunction = translateWithOpenAI; break;
+                case 'deepseek':
+                    apiKey = document.getElementById('deepseek_api_key').value; model = document.getElementById('deepseek_model').value; translationFunction = translateWithDeepseek; break;
+                case 'custom':
+                    customApiUrl = document.getElementById('custom_api_url').value; apiKey = document.getElementById('custom_api_key').value; model = document.getElementById('custom_model').value; customExtraHeaders = document.getElementById('custom_extra_headers').value;
+                    if (!customApiUrl) { showError('error-custom-api-url'); return; } if (!model) { showError('error-custom-model-name'); return; }
+                    translationFunction = translateWithCustom; break;
+                default: showError('error-invalid-provider'); return;
+            }
+            if (apiProvider !== 'custom' && !apiKey) { showError('error-api-key', {apiProvider}); return; }
+
+            const targetLang = document.getElementById('lang-input').value;
+            const temperature = parseFloat(document.getElementById('temperature').value);
+            const chunkCount = parseInt(document.getElementById('chunk_count').value);
+            const baseDelay = parseInt(document.getElementById('base_delay').value);
+            const prompt = document.getElementById('translation_prompt').value;
+
+            if (!isRetry) {
+                originalSrtChunks = splitSrtIntoChunks(srtContent, chunkCount); // MODIFIED
+                if (originalSrtChunks.length === 0) { showError('error-no-content-translate'); return; }
+                translatedSrtChunks = new Array(originalSrtChunks.length).fill('');
+            }
+            
+            progressContainer.style.display = 'block';
+            downloadLink.innerHTML = '';
+            errorMessage.style.display = 'none';
+            if (liveTableContainer && !isRetry) liveTableContainer.style.display = 'block';
+            if (liveTableBody && !isRetry) liveTableBody.innerHTML = '';
+
+            let successfulTranslationsThisRun = 0; // For progress bar during this specific run
+            const chunksToProcess = specificChunkIndex !== -1 ? [specificChunkIndex] : 
+                                    isRetry ? Array.from(document.querySelectorAll('.retry-chunk-checkbox:checked')).map(cb => parseInt(cb.value)) 
+                                            : originalSrtChunks.map((_, i) => i);
+            
+            if (chunksToProcess.length === 0 && isRetry) { 
+                alert(getLocalizedString('alert-no-chunks-retry')); 
+                if (document.getElementById('retry-failed-chunks-btn')) document.getElementById('retry-failed-chunks-btn').disabled = false;
+                return; 
+            }
+            
+            const totalChunksInThisRun = chunksToProcess.length;
+            let overallProgressCounter = translatedSrtChunks.filter(c => c && !isTranslationError(c)).length;
+
+
+            for (const idx of chunksToProcess) {
+                const currentOverallChunkNum = originalSrtChunks.findIndex((_,chunk_idx) => chunk_idx === idx) +1;
+
+                if (isRetry) {
+                    progressTextEl.textContent = getLocalizedString('status-retrying-batch', { count: totalChunksInThisRun, percent: Math.round((successfulTranslationsThisRun / totalChunksInThisRun) * 100) });
+                    chunkStatusEl.textContent = getLocalizedString('status-retranslating-chunk', {chunkNum: currentOverallChunkNum});
+                } else {
+                    progressTextEl.textContent = getLocalizedString('progress-text-initial').replace('0', Math.round(((overallProgressCounter) / originalSrtChunks.length) * 100));
+                    chunkStatusEl.textContent = getLocalizedString('chunk-status-initial').replace('0/0', `${overallProgressCounter + 1}/${originalSrtChunks.length}`);
+                }
+
+                renderLiveTranslationTable([originalSrtChunks[idx]], [translatedSrtChunks[idx] || (isRetry ? getLocalizedString('status-retrying-chunk') : getLocalizedString('status-translating-chunk'))], (failedIdxInTable) => processTranslationCycle(true, idx));
+                
+                try {
+                    const rawTranslatedText = await callTranslationAPI(translationFunction, apiKey, model, prompt, targetLang, originalSrtChunks[idx], temperature, customApiUrl, customExtraHeaders);
+                    // postProcessTranslatedChunkText is now called inside each translation API function.
+                    // The cleaning of BIDI and continuation phrases should happen after postProcess
+                    translatedSrtChunks[idx] = (rawTranslatedText || '')
+                        .replace(/[\u202A\u202B\u202C\u202D\u202E\u200E\u200F]/g, '') 
+                        .replace(/^\s*\(?ترجمه ادامه متن.*\)?\s*$/gmi, '')
+                        .replace(/^\s*\(?translation continues.*\)?\s*$/gmi, '')
+                        .replace(/^\s*\(?ادامه دارد...\)?\s*$/gmi, '')
+                        .trim();
+                    
+                    if (!isTranslationError(translatedSrtChunks[idx])) {
+                        successfulTranslationsThisRun++;
+                        if (!isRetry || (isRetry && chunksToProcess.includes(idx))) { // if it's a fresh run, or if this retried chunk was successful
+                           if (translatedSrtChunks.filter(c => c && !isTranslationError(c)).length > overallProgressCounter) {
+                               overallProgressCounter = translatedSrtChunks.filter(c => c && !isTranslationError(c)).length;
+                           }
+                        }
+                    }
+                } catch (err) {
+                    translatedSrtChunks[idx] = `[ERROR] Chunk ${currentOverallChunkNum}: ${err.message || err}`;
+                }
+                
+                renderLiveTranslationTable([originalSrtChunks[idx]], [translatedSrtChunks[idx]], (failedIdxInTable) => processTranslationCycle(true, idx));
+                progressBar.style.width = `${Math.round(((overallProgressCounter) / originalSrtChunks.length) * 100)}%`;
+
+                if (chunksToProcess.indexOf(idx) < totalChunksInThisRun - 1) await new Promise(resolve => setTimeout(resolve, baseDelay));
+            }
+            
+            const finalMergedSrt = mergeChunks(translatedSrtChunks); // MODIFIED
+            const finalFixedSrt = fixSrtStructure(finalMergedSrt);   // MODIFIED
+            let finalOutputSrt = finalFixedSrt;
+
+            if (isPersianLike(targetLang)) {
+                finalOutputSrt = applyRtlToSrt(finalFixedSrt); // MODIFIED
+            }
+
+            if (finalOutputSrt && finalOutputSrt.trim() !== '') {
+                const blob = new Blob([finalOutputSrt], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                downloadLink.innerHTML = `<a href="${url}" download="translated_subtitle.srt">${getLocalizedString("download-subtitle-link")}</a>`;
+                progressTextEl.textContent = getLocalizedString('translation-complete-success', {successful: translatedSrtChunks.filter(c => c && !isTranslationError(c)).length, total: originalSrtChunks.length});
+            } else {
+                progressTextEl.textContent = getLocalizedString('translation-complete-no-download');
+                if (originalSrtChunks.length > 0 && translatedSrtChunks.filter(c => c && !isTranslationError(c)).length === 0) {
+                    showError('error-all-chunks-failed');
+                }
+            }
+            
+            chunkStatusEl.textContent = isRetry ? getLocalizedString('status-batch-retry-finished') : "";
+            timeEstimateEl.textContent = "";
+            showManualRetryIfNeeded();
+            if (isRetry && document.getElementById('retry-failed-chunks-btn')) {
+                document.getElementById('retry-failed-chunks-btn').disabled = false;
+                document.getElementById('retry-failed-chunks-btn').textContent = getLocalizedString('retry-failed-button');
+            }
+        }
+
+
+        let originalSrtChunks = [];
+        let translatedSrtChunks = [];
+
+        translateForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            progressBar.style.width = '0%';
+            progressTextEl.textContent = getLocalizedString('progress-text-initial');
+            chunkStatusEl.textContent = getLocalizedString('chunk-status-initial');
+            timeEstimateEl.textContent = getLocalizedString('time-estimate-initial');
+            processTranslationCycle(false);
+        });
+        
+        function showManualRetryIfNeeded() {
+            const failedIndices = [];
+            if (!translatedSrtChunks || translatedSrtChunks.length === 0) {
+                 if(document.getElementById('manual-retry-section')) document.getElementById('manual-retry-section').style.display = 'none'; return;
+            }
+            for (let i = 0; i < translatedSrtChunks.length; i++) {
+                if (isTranslationError(translatedSrtChunks[i])) failedIndices.push(i);
+            }
+            const manualRetrySection = document.getElementById('manual-retry-section');
+            const retryList = document.getElementById('retry-chunks-list');
+            if (!manualRetrySection || !retryList) return;
+
+            if (failedIndices.length === 0) { manualRetrySection.style.display = 'none'; return; }
+
+            retryList.innerHTML = '';
+            failedIndices.forEach(idx => {
+                const div = document.createElement('div');
+                div.style.cssText = 'margin-bottom:10px;padding:8px;border:1px solid #ccc;border-radius:4px;';
+                div.innerHTML = `
+                    <label style="display:flex;align-items:center;margin-bottom:5px;">
+                        <input type="checkbox" class="retry-chunk-checkbox" value="${idx}" checked style="margin-right:8px;">
+                        <strong style="font-size:1.05em;">Chunk #${idx + 1} (click text to copy)</strong>
+                    </label>
+                    <pre title="Click to copy source text" class="retry-source-text" data-chunk-index="${idx}" style="white-space:pre-wrap;background:#f0f0f0;padding:6px;border-radius:4px;font-size:0.9em;max-height:100px;overflow:auto;cursor:pointer;">${escapeHtml(originalSrtChunks[idx])}</pre>
+                    <div style="color:#c00;font-size:0.85em;margin-top:4px;white-space:pre-wrap;">${escapeHtml(translatedSrtChunks[idx] || '[No translation attempt or empty]')}</div>`;
+                retryList.appendChild(div);
+            });
+            document.querySelectorAll('.retry-source-text').forEach(el => el.addEventListener('click', async (e) => {
+                const idx = parseInt(e.currentTarget.dataset.chunkIndex);
+                try { await navigator.clipboard.writeText(originalSrtChunks[idx]); e.currentTarget.style.border = '2px solid green'; setTimeout(() => e.currentTarget.style.border = '', 1000); } catch (err) { console.error('Copy failed:', err); }
+            }));
+            manualRetrySection.style.display = 'block';
+        }
+
+        if(document.getElementById('retry-failed-chunks-btn')) {
+            document.getElementById('retry-failed-chunks-btn').onclick = async function() {
+                this.disabled = true;
+                this.textContent = getLocalizedString('status-retrying-selected-chunks');
+                await processTranslationCycle(true);
+            };
+        }
+
+
+        themeToggle.addEventListener('click', toggleTheme);
+        if (languageToggle) {
+            languageToggle.addEventListener('click', () => {
+                setLanguage(currentLang === 'en' ? 'fa' : 'en');
+            });
+        }
+
+
+        (function() { 
+            const isDark = localStorage.getItem('darkMode') === 'true';
+            if (isDark) document.body.classList.add('dark-mode');
+            if (themeToggle) themeToggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            if (apiProviderSelect) apiProviderSelect.dispatchEvent(new Event('change'));
+            setLanguage(currentLang); 
+        })();
+
+        if (clearMemoryButton) {
+            clearMemoryButton.addEventListener('click', function() {
+                ['gemini', 'openai', 'deepseek', 'custom'].forEach(p => {
+                    const keyEl = document.getElementById(`${p}_api_key`); if (keyEl) keyEl.value = '';
+                    const remEl = document.getElementById(`remember_${p}_key`); if (remEl) remEl.checked = false;
+                    localStorage.removeItem(`${p}ApiKey`); localStorage.removeItem(`remember${p.charAt(0).toUpperCase() + p.slice(1)}Key`);
+                });
+                alert(getLocalizedString('alert-keys-cleared'));
+            });
+        }
+        
+
+        const youtubeUrlInput = document.getElementById('youtube_url');
+        const srtTextArea = document.getElementById('srt_text');
+        if (youtubeUrlInput && srtTextArea) {
+            youtubeUrlInput.addEventListener('input', async function() { // Changed to 'input' for responsiveness
+                const url = youtubeUrlInput.value.trim(); if (!url) return;
+                const videoIdMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+                if (!videoIdMatch || !videoIdMatch[1]) return;
+                const videoId = videoIdMatch[1];
+                srtTextArea.value = ''; srtTextArea.placeholder = 'Fetching subtitles...'; youtubeUrlInput.disabled = true;
+                try {
+                    let srt = '', found = false;
+                    try { 
+                        const r = await fetch(`https://youtubetranscript.com/?server_host=https://www.youtubetranscript.com&video_id=${videoId}&language=en&format=json`);
+                        if (r.ok) { const d = await r.json(); if (Array.isArray(d) && d.length > 0 && d[0].text) {
+                            srt = d.map((e,i) => { const s=parseFloat(e.start), dr=parseFloat(e.duration||e.dur||2), ed=s+dr; const tF = sc => `${String(Math.floor(sc/3600)).padStart(2,"0")}:${String(Math.floor((sc%3600)/60)).padStart(2,"0")}:${String(Math.floor(sc%60)).padStart(2,"0")},${String(Math.floor((sc-Math.floor(sc))*1000)).padStart(3,"0")}`; return `${i+1}\n${tF(s)} --> ${tF(ed)}\n${e.text.trim()}\n`; }).join('\n'); found = true; } }
+                    } catch (e) { console.warn("youtubetranscript.com failed:", e); }
+                    
+                    if (!found) { 
+                        try { const r = await fetch(`https://video.google.com/timedtext?lang=en&v=${videoId}&fmt=srv3`); if (r.ok) { const xT = await r.text(); if (xT.includes('<text')) {
+                            const p = new DOMParser(), xD = p.parseFromString(xT, "text/xml"), ts = xD.getElementsByTagName("text");
+                            srt = Array.from(ts).map((t,i) => { const s=parseFloat(t.getAttribute("start")), dr=parseFloat(t.getAttribute("dur")||"2"), ed=s+dr; let txt = (t.textContent||"").replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/<br\s*\/?>/gi,'\n').trim(); if(!txt) return null; const tF = sc => `${String(Math.floor(sc/3600)).padStart(2,"0")}:${String(Math.floor((sc%3600)/60)).padStart(2,"0")}:${String(Math.floor(sc%60)).padStart(2,"0")},${String(Math.floor((sc-Math.floor(sc))*1000)).padStart(3,"0")}`; return `${i+1}\n${tF(s)} --> ${tF(ed)}\n${txt}\n`; }).filter(Boolean).join('\n'); if(srt) found = true; } }
+                        } catch (e) { console.warn("Google timedtext failed:", e); }
+                    }
+
+                    if (!found || !srt || !/\d{2}:\d{2}:\d{2},\d{3}/.test(srt)) { // Basic SRT format check
+                        srtTextArea.placeholder = getLocalizedString('paste-srt-label'); alert(getLocalizedString('alert-subtitle-fetch-failed'));
+                    } else {
+                        srtTextArea.value = fixSrtStructure(srt); // Apply fixSrtStructure here
+                        srtTextArea.placeholder = getLocalizedString('paste-srt-label');
+                        if(textMethodRadio) textMethodRadio.checked = true; 
+                        if(fileInputSection) fileInputSection.style.display='none'; 
+                        if(textInputSection) textInputSection.style.display='block';
+                        srtTextArea.focus(); alert(getLocalizedString('alert-subtitle-fetch-success'));
+                    }
+                } catch (err) { 
+                    srtTextArea.value=''; srtTextArea.placeholder = getLocalizedString('paste-srt-label'); 
+                    alert(getLocalizedString('alert-subtitle-fetch-error', {errorMessage: err.message})); 
+                    console.error("YT fetch error:", err);
+                } finally { youtubeUrlInput.disabled = false; }
+            });
+        }
+
+
+        document.addEventListener('DOMContentLoaded', () => { 
+            ['gemini','openai','deepseek','custom'].forEach(p => {
+                const kI = document.getElementById(`${p}_api_key`), rC = document.getElementById(`remember_${p}_key`);
+                if(kI && rC){ const rK=localStorage.getItem(`${p}ApiKey`), sR=localStorage.getItem(`remember${p[0].toUpperCase()+p.slice(1)}Key`)==='true';
+                if(sR && rK){ kI.value=rK; rC.checked=true; }
+                rC.addEventListener('change',e=>{ localStorage.setItem(`remember${p[0].toUpperCase()+p.slice(1)}Key`,e.target.checked); if(e.target.checked&&kI.value)localStorage.setItem(`${p}ApiKey`,kI.value); else if(!e.target.checked)localStorage.removeItem(`${p}ApiKey`); });
+                kI.addEventListener('input',()=>{ if(rC.checked&&kI.value)localStorage.setItem(`${p}ApiKey`,kI.value); else if(rC.checked&&!kI.value)localStorage.removeItem(`${p}ApiKey`); }); }
+            });
+        });
+
+    </script>
+</body>
+</html>
